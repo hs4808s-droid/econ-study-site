@@ -21,7 +21,41 @@ function progressDonut(id) {
 </div>`;
 }
 
-export function renderDocPage(doc, { prevDoc, nextDoc, keyBoxesHtml, readingMinutes }) {
+/** Group the document's bold "core" key-boxes by the section they live in,
+ *  each linking back to its exact spot in the body (fix #7). */
+function groupKeyBoxes(keyBoxes) {
+  const groups = [];
+  const bySection = new Map();
+  for (const kb of keyBoxes.filter((k) => k.isBold)) {
+    let group = bySection.get(kb.sectionId);
+    if (!group) {
+      group = { sectionTitle: kb.sectionTitle, items: [] };
+      bySection.set(kb.sectionId, group);
+      groups.push(group);
+    }
+    group.items.push(kb);
+  }
+  return groups;
+}
+
+function renderKeyBoxGroups(groups, emptyMessage) {
+  if (!groups.length) return `<p style="color:var(--text-muted);font-size:13px;">${emptyMessage}</p>`;
+  return groups
+    .map(
+      (g) => `<div class="summary-group">
+    <div class="summary-group-title">${g.sectionTitle}</div>
+    ${g.items
+      .map((kb) => `<a class="key-box-link" href="#${kb.id}" data-jump-body="${kb.id}">${kb.html}</a>`)
+      .join('')}
+  </div>`
+    )
+    .join('');
+}
+
+export function renderDocPage(doc, { prevDoc, nextDoc, readingMinutes }) {
+  const groups = groupKeyBoxes(doc.keyBoxes);
+  const summaryHtml = renderKeyBoxGroups(groups, '이 문서에는 굵게 강조된 핵심 박스가 없습니다.');
+
   const bodyHtml = `
 <div class="page-container">
   <div class="breadcrumb">
@@ -43,6 +77,10 @@ export function renderDocPage(doc, { prevDoc, nextDoc, keyBoxesHtml, readingMinu
     <span>읽기 ${readingMinutes}분</span>
     <span>섹션 ${doc.sections.length}개</span>
   </div>
+  <div class="doc-status-actions" data-doc-slug-for-status="${doc.slug}">
+    <button type="button" class="status-btn" data-mark-read>${icon('check', { size: 14 })} 읽음 표시</button>
+    <button type="button" class="status-btn" data-mark-review>${icon('review', { size: 14 })} 복습 필요</button>
+  </div>
 
   <div class="tabbar" data-doc-tabs>
     <a href="#" class="tab-link active" data-tab-btn="body">본문</a>
@@ -56,7 +94,7 @@ export function renderDocPage(doc, { prevDoc, nextDoc, keyBoxesHtml, readingMinu
       <div class="doc-summary-view doc-section" data-pagefind-ignore>
         <div class="section-label">SUMMARY</div>
         <h2>핵심 요약</h2>
-        ${keyBoxesHtml || '<p style="color:var(--text-muted)">이 문서에는 핵심 박스가 없습니다.</p>'}
+        ${summaryHtml}
       </div>
       ${doc.html}
       <div class="doc-nav" data-pagefind-ignore>
@@ -76,17 +114,17 @@ export function renderDocPage(doc, { prevDoc, nextDoc, keyBoxesHtml, readingMinu
       </div>
       <div class="card">
         <div class="card-title">핵심 박스 모음</div>
-        <div style="max-height:260px;overflow-y:auto;">${keyBoxesHtml || '<p style="color:var(--text-muted);font-size:13px;">없음</p>'}</div>
+        <div style="max-height:260px;overflow-y:auto;">${summaryHtml}</div>
       </div>
     </aside>
   </div>
 </div>
-<button class="toc-sheet-trigger" id="tocSheetTrigger">${icon('list', { size: 16 })} 목차</button>
+<button class="toc-sheet-trigger" id="tocSheetTrigger" aria-label="목차 열기">${icon('list', { size: 18 })}</button>
 <div class="toc-sheet" id="tocSheet">
   <div class="card-title">목차</div>
   ${tocHtml(doc.sections)}
 </div>
 `;
 
-  return { bodyHtml, active: 'docs' };
+  return { bodyHtml, active: 'home' };
 }

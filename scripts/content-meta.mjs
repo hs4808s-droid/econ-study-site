@@ -65,17 +65,35 @@ async function extractDate(frontmatter, body, filePath) {
   return stat.mtime.toISOString().slice(0, 10);
 }
 
+function clip(text) {
+  const plain = text.replace(/[*_`>#]/g, '').trim();
+  return plain.length > 90 ? `${plain.slice(0, 90)}...` : plain;
+}
+
 function extractExcerpt(body) {
   const withoutFirstH1 = body.replace(/^#\s+.+$/m, '');
   const lines = withoutFirstH1.split('\n');
+
+  // prefer the subtitle line (### ...) that immediately follows the title
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^###\s+/.test(trimmed)) return clip(trimmed.replace(/^###\s+/, ''));
+    if (/^#{1,6}\s/.test(trimmed)) break; // hit a section heading before any subtitle
+    if (trimmed.startsWith('>')) continue;
+    if (trimmed === '---') continue;
+    break; // first real content line wasn't a subtitle; fall through to paragraph scan
+  }
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     if (/^#{1,6}\s/.test(trimmed)) continue;
     if (trimmed.startsWith('>')) continue;
     if (trimmed === '---') continue;
-    const plain = trimmed.replace(/[*_`>#]/g, '').trim();
-    if (plain) return plain.length > 90 ? `${plain.slice(0, 90)}...` : plain;
+    if (/^기준\s*시점\s*[:：]/.test(trimmed.replace(/[*_]/g, ''))) continue;
+    const plain = clip(trimmed);
+    if (plain) return plain;
   }
   return '';
 }

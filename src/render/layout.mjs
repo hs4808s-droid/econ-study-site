@@ -3,7 +3,6 @@ import { icon } from './icons.mjs';
 function navItems(active) {
   const items = [
     { key: 'home', href: '/index.html', label: '홈', icon: 'home' },
-    { key: 'docs', href: '/index.html', label: '문서', icon: 'doc' },
     { key: 'search', href: '#', label: '검색', icon: 'search', attr: 'data-open-search' },
     { key: 'review', href: '/index.html?filter=review', label: '복습', icon: 'review' },
     { key: 'settings', href: '#', label: '설정', icon: 'settings', attr: 'data-open-settings' },
@@ -61,7 +60,10 @@ ${extraHead}
 <div class="settings-panel" id="settingsPanel">
   <div class="settings-row">
     <span>다크 모드</span>
-    <button type="button" class="theme-toggle-btn" id="themeToggle">${icon('moon', { size: 14 })}</button>
+    <button type="button" class="theme-toggle-btn" id="themeToggle">
+      ${icon('moon', { size: 14 })}
+      <span id="themeToggleLabel">꺼짐</span>
+    </button>
   </div>
   <div class="settings-row">
     <span>글자 크기</span>
@@ -73,6 +75,16 @@ ${extraHead}
   </div>
 </div>
 <div class="toc-sheet-backdrop" id="tocBackdrop"></div>
+<div class="search-overlay-backdrop" id="searchOverlayBackdrop">
+  <div class="search-overlay" role="dialog" aria-modal="true" aria-label="문서 검색">
+    <div class="search-overlay-input-row">
+      ${icon('search', { size: 16 })}
+      <input type="search" id="searchOverlayInput" class="search-input" placeholder="문서 검색 (예: 금리)">
+      <button type="button" id="searchOverlayClose" aria-label="닫기">${icon('x', { size: 18 })}</button>
+    </div>
+    <div id="searchOverlayResults" class="search-overlay-results"></div>
+  </div>
+</div>
 <script src="/client/app.js" type="module"></script>
 ${extraScripts}
 </body>

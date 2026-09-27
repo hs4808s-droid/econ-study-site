@@ -27,6 +27,19 @@ function readingMinutesFor(body) {
   return Math.max(1, Math.round(body.length / 500));
 }
 
+function htmlToPlainText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function main() {
   await fs.rm(DIST_DIR, { recursive: true, force: true });
   await fs.mkdir(DIST_DIR, { recursive: true });
@@ -57,11 +70,9 @@ async function main() {
     const doc = docs[i];
     const prevDoc = docs[i - 1] || null;
     const nextDoc = docs[i + 1] || null;
-    const keyBoxesHtml = doc.keyBoxes.join('\n');
     const { bodyHtml, active } = renderDocPage(doc, {
       prevDoc,
       nextDoc,
-      keyBoxesHtml,
       readingMinutes: readingMinutesFor(doc.body),
     });
     const html = renderPage({
@@ -101,14 +112,37 @@ async function main() {
   await copyFile(path.join(ROOT, 'pwa', 'manifest.json'), path.join(DIST_DIR, 'manifest.json'));
 
   // ---- plain-text search index (substring fallback; Pagefind's ko tokenizer
-  // treats "금리가/금리를" as whole words distinct from "금리", see README) ----
-  const searchIndex = docs.map((d) => ({
-    slug: d.slug,
-    title: d.title,
-    url: `/docs/${d.slug}.html`,
-    category: d.category,
-    text: toPlainText(d.body),
-  }));
+  // treats "금리가/금리를" as whole words distinct from "금리", see README).
+  // Indexed per section so a result can jump straight to the matching spot. ----
+  const searchIndex = [];
+  for (const d of docs) {
+    const sectionTitleById = new Map(d.sections.map((s) => [s.id, s.title]));
+    const sectionRe = /<section[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g;
+    let m;
+    let matchedAny = false;
+    while ((m = sectionRe.exec(d.html))) {
+      matchedAny = true;
+      const [, sectionId, innerHtml] = m;
+      const text = htmlToPlainText(innerHtml);
+      if (!text) continue;
+      searchIndex.push({
+        slug: d.slug,
+        title: d.title,
+        url: `/docs/${d.slug}.html#${sectionId}`,
+        sectionTitle: sectionTitleById.get(sectionId) || d.title,
+        text,
+      });
+    }
+    if (!matchedAny) {
+      searchIndex.push({
+        slug: d.slug,
+        title: d.title,
+        url: `/docs/${d.slug}.html`,
+        sectionTitle: d.title,
+        text: toPlainText(d.body),
+      });
+    }
+  }
   await fs.writeFile(path.join(DIST_DIR, 'search-index.json'), JSON.stringify(searchIndex), 'utf8');
 
   // ---- content assets referenced by markdown (images etc.) ----
