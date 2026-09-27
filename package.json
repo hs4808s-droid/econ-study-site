@@ -1,0 +1,21 @@
+{
+  "name": "econ-study-site",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "sync": "node scripts/sync-content.mjs",
+    "build": "node scripts/build.mjs && npx pagefind --site dist",
+    "dev": "node scripts/build.mjs && npx pagefind --site dist && node scripts/dev-server.mjs",
+    "watch": "node scripts/watch.mjs"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.0",
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0"
+  },
+  "devDependencies": {
+    "pagefind": "^1.3.0"
+  }
+}
